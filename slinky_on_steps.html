@@ -1,0 +1,255 @@
+
+<style>
+  #sk { padding: 1.5rem 0 1rem; font-family: var(--font-sans); }
+  #sk canvas { display: block; width: 100%; border-radius: var(--border-radius-lg); }
+  #sk-controls { display: flex; align-items: center; gap: 12px; margin: 1rem 0 0.5rem; }
+  #sk-controls label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; }
+  #sk-controls input { flex: 1; }
+  #sk-controls span { font-size: 13px; font-weight: 500; min-width: 40px; color: var(--color-text-primary); }
+  #sk-btns { display: flex; gap: 8px; margin: 0.75rem 0; }
+  #sk-caption { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; min-height: 1.8em; margin-top: 0.5rem; font-style: italic; }
+</style>
+
+<div id="sk">
+  <h2 class="sr-only">A slinky descending a staircase — one step at a time, like learning through repeated feedback</h2>
+  <canvas id="skc" width="640" height="300"></canvas>
+
+  <div id="sk-controls">
+    <label>Step size</label>
+    <input type="range" id="sk-lr" min="1" max="5" value="2" step="1">
+    <span id="sk-lrv">careful</span>
+  </div>
+
+  <div id="sk-btns">
+    <button id="sk-step">Take one step</button>
+    <button id="sk-run">Roll</button>
+    <button id="sk-reset">Reset</button>
+  </div>
+  <p id="sk-caption">The slinky waits at the top. Press <em>Take one step</em> to begin.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('skc');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 300;
+
+const lrLabels = ['', 'tiny', 'careful', 'medium', 'bold', 'wild'];
+
+const STEPS = 9;
+const stepW = (W - 80) / STEPS;
+const stepH = (H - 80) / STEPS;
+
+function stepX(i) { return 40 + i * stepW; }
+function stepY(i) { return 60 + i * stepH; }
+
+let pos = 0;
+let phase = 0;
+let animId = null;
+let running = false;
+let settled = false;
+let stepSize = 2;
+
+const captions = [
+  'The slinky leans forward. It senses the drop below.',
+  'The front coils tip over the edge — committed now.',
+  'Weight transfers. The slinky stretches across the step.',
+  'The trailing end lifts, follows, lands.',
+  'One step lower. The slinky collects itself and waits.',
+  'It has found calmer ground. No more steps below.',
+];
+
+function getCaption() {
+  if (settled) return captions[5];
+  if (phase < 0.2) return captions[0];
+  if (phase < 0.45) return captions[1];
+  if (phase < 0.65) return captions[2];
+  if (phase < 0.85) return captions[3];
+  return captions[4];
+}
+
+function isDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function drawSteps(dark) {
+  const tread = dark ? '#2a2a2a' : '#f2f0eb';
+  const edge  = dark ? '#444'    : '#d0cec8';
+  const label = dark ? '#555'    : '#ccc';
+
+  for (let i = 0; i < STEPS; i++) {
+    const x = stepX(i), y = stepY(i);
+    ctx.fillStyle = tread;
+    ctx.fillRect(x, y, stepW, H - y);
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(x, y, stepW, H - y);
+
+    if (i === STEPS - 1) {
+      ctx.fillStyle = dark ? '#1D9E75' : '#5DCAA5';
+      ctx.fillRect(x + 6, y - 16, stepW - 12, 10);
+      ctx.fillStyle = dark ? '#9FE1CB' : '#085041';
+      ctx.font = '10px var(--font-sans, sans-serif)';
+      ctx.textAlign = 'center';
+      ctx.fillText('calmer ground', x + stepW/2, y - 8);
+    }
+  }
+}
+
+function drawSlinky(dark) {
+  const nextStep = Math.min(pos + stepSize, STEPS - 1);
+  const curX = stepX(pos);
+  const curY = stepY(pos);
+  const nxtX = stepX(nextStep);
+  const nxtY = stepY(nextStep);
+
+  let headX, headY, tailX, tailY;
+
+  if (settled) {
+    headX = curX + stepW * 0.72;
+    headY = curY;
+    tailX = curX + stepW * 0.18;
+    tailY = curY;
+  } else if (phase < 0.45) {
+    const t = phase / 0.45;
+    headX = curX + stepW * 0.72 + (nxtX + stepW * 0.12 - (curX + stepW * 0.72)) * t * t;
+    headY = curY + (nxtY - curY) * t * t;
+    tailX = curX + stepW * 0.18;
+    tailY = curY;
+  } else if (phase < 0.85) {
+    const t = (phase - 0.45) / 0.40;
+    headX = nxtX + stepW * 0.12 + (nxtX + stepW * 0.72 - nxtX - stepW * 0.12) * t;
+    headY = nxtY;
+    tailX = curX + stepW * 0.18 + (nxtX + stepW * 0.18 - curX - stepW * 0.18) * t * t;
+    tailY = curY + (nxtY - curY) * t * t;
+  } else {
+    const t = (phase - 0.85) / 0.15;
+    headX = nxtX + stepW * 0.72;
+    headY = nxtY;
+    tailX = nxtX + stepW * 0.18 * (1 - t) + nxtX + stepW * 0.18 * t;
+    tailY = nxtY;
+  }
+
+  const coils = 11;
+  const coilColor = dark ? '#85B7EB' : '#378ADD';
+  const coilStroke = dark ? '#B5D4F4' : '#185FA5';
+
+  const dx = headX - tailX;
+  const dy = headY - tailY;
+  const len = Math.sqrt(dx*dx + dy*dy) || 1;
+  const nx = -dy/len, ny = dx/len;
+
+  const stretch = Math.max(0.5, len / (stepW * 0.54));
+  const amp = Math.min(14, 8 * stretch);
+
+  ctx.save();
+  for (let ci = 0; ci <= coils; ci++) {
+    const t = ci / coils;
+    const cx = tailX + dx * t;
+    const cy = tailY + dy * t;
+    const wave = Math.sin(t * Math.PI * 2 * coils) * amp;
+    const px = cx + nx * wave;
+    const py = cy + ny * wave;
+
+    if (ci === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.beginPath();
+  for (let ci = 0; ci <= coils * 8; ci++) {
+    const t = ci / (coils * 8);
+    const bx = tailX + dx * t;
+    const by = tailY + dy * t;
+    const wave = Math.sin(t * Math.PI * 2 * coils) * amp;
+    const px = bx + nx * wave;
+    const py = by + ny * wave;
+    if (ci === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = coilColor;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  [[tailX, tailY], [headX, headY]].forEach(([ex, ey]) => {
+    ctx.beginPath();
+    ctx.arc(ex, ey, 5, 0, Math.PI*2);
+    ctx.fillStyle = coilStroke;
+    ctx.fill();
+  });
+}
+
+function render() {
+  const dark = isDark();
+  ctx.clearRect(0,0,W,H);
+  const bg = dark ? '#1a1a1a' : '#faf9f6';
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.roundRect(0,0,W,H,10); ctx.fill();
+  drawSteps(dark);
+  drawSlinky(dark);
+  document.getElementById('sk-caption').textContent = getCaption();
+}
+
+const SPEED = [0, 0.018, 0.028, 0.04, 0.055, 0.09];
+
+function animate() {
+  if (!running) return;
+  const speed = SPEED[stepSize];
+  phase += speed;
+  if (phase >= 1) {
+    phase = 0;
+    pos = Math.min(pos + stepSize, STEPS - 1);
+    if (pos >= STEPS - 1) { settled = true; stopRun(); }
+  }
+  render();
+}
+
+function stopRun() {
+  if (animId) { clearAnimationFrame(animId); animId = null; }
+  running = false;
+  document.getElementById('sk-run').textContent = 'Roll';
+}
+
+function startRun() {
+  running = true;
+  document.getElementById('sk-run').textContent = 'Pause';
+  function loop() {
+    if (!running) return;
+    animate();
+    animId = requestAnimationFrame(loop);
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+document.getElementById('sk-step').addEventListener('click', () => {
+  stopRun();
+  if (settled) return;
+  phase = 0;
+  running = true;
+  function loop() {
+    if (!running) return;
+    animate();
+    if (phase === 0) { stopRun(); return; }
+    animId = requestAnimationFrame(loop);
+  }
+  animId = requestAnimationFrame(loop);
+});
+
+document.getElementById('sk-run').addEventListener('click', () => {
+  if (running) { stopRun(); return; }
+  if (settled) return;
+  startRun();
+});
+
+document.getElementById('sk-reset').addEventListener('click', () => {
+  stopRun(); pos = 0; phase = 0; settled = false;
+  render();
+  document.getElementById('sk-caption').innerHTML = 'The slinky waits at the top. Press <em>Take one step</em> to begin.';
+});
+
+document.getElementById('sk-lr').addEventListener('input', function() {
+  stepSize = parseInt(this.value);
+  document.getElementById('sk-lrv').textContent = lrLabels[stepSize];
+});
+
+render();
+</script>

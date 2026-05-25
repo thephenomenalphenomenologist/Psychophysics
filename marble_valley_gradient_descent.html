@@ -1,0 +1,293 @@
+
+<style>
+  .mv-wrap { font-family: var(--font-sans); padding: 2rem 0 1rem; max-width: 680px; }
+  .mv-canvas-wrap { position: relative; width: 100%; }
+  .mv-label { font-size: 13px; color: var(--color-text-secondary); margin: 0; }
+  .mv-term { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 0.5px solid; cursor: default; }
+  .mv-param { background: #E6F1FB; color: #0C447C; border-color: #85B7EB; }
+  .mv-loss  { background: #FAECE7; color: #712B13; border-color: #F0997B; }
+  .mv-grad  { background: #E1F5EE; color: #085041; border-color: #5DCAA5; }
+  .mv-lr    { background: #FAEEDA; color: #633806; border-color: #EF9F27; }
+  .mv-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 1rem 0 1.5rem; }
+  .mv-info { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-top: 1.25rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .mv-stat { text-align: center; }
+  .mv-stat-val { font-size: 18px; font-weight: 500; display: block; }
+  .mv-stat-lab { font-size: 11px; color: var(--color-text-secondary); display: block; margin-top: 2px; }
+  .mv-controls { display: flex; align-items: center; gap: 10px; margin: 1rem 0; flex-wrap: wrap; }
+  .mv-controls label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; }
+  .mv-controls input[type=range] { flex: 1; min-width: 80px; }
+  .mv-btn-row { display: flex; gap: 8px; margin: 0.75rem 0; }
+  .mv-narrative { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; margin: 0.75rem 0 0; min-height: 2.2em; }
+</style>
+
+<div class="mv-wrap">
+  <h2 class="sr-only">Interactive gradient descent simulation: a marble rolling downhill on a loss landscape</h2>
+
+  <div class="mv-legend">
+    <span class="mv-term mv-param">● position = parameters</span>
+    <span class="mv-term mv-loss">▲ height = loss</span>
+    <span class="mv-term mv-grad">→ slope = gradient</span>
+    <span class="mv-term mv-lr">⟵⟶ step = learning rate</span>
+  </div>
+
+  <div class="mv-canvas-wrap">
+    <canvas id="mvCanvas" width="640" height="280" style="width:100%; border-radius: var(--border-radius-lg); display:block;"></canvas>
+  </div>
+
+  <div class="mv-controls" style="margin-top:1rem;">
+    <label>Learning rate</label>
+    <input type="range" id="lrSlider" min="1" max="9" value="4" step="1">
+    <span id="lrVal" style="font-size:13px; font-weight:500; min-width:36px;">0.04</span>
+  </div>
+
+  <div class="mv-btn-row">
+    <button id="stepBtn">Step once</button>
+    <button id="runBtn">Roll ▶</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+
+  <div class="mv-info">
+    <div class="mv-stat">
+      <span class="mv-stat-val" id="statPos" style="color:#185FA5;">—</span>
+      <span class="mv-stat-lab">position (params)</span>
+    </div>
+    <div class="mv-stat">
+      <span class="mv-stat-val" id="statLoss" style="color:#993C1D;">—</span>
+      <span class="mv-stat-lab">loss (height)</span>
+    </div>
+    <div class="mv-stat">
+      <span class="mv-stat-val" id="statGrad" style="color:#0F6E56;">—</span>
+      <span class="mv-stat-lab">gradient (slope)</span>
+    </div>
+  </div>
+
+  <p class="mv-narrative" id="mvNarrative">Press <em>Step once</em> or <em>Roll</em> to start the marble's journey.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('mvCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+function lossFunc(x) {
+  return 0.0012 * Math.pow(x - 3, 4) - 0.04 * Math.pow(x - 3, 3) + 0.5 * Math.pow(x - 2.5, 2) + 0.15 * Math.sin(x * 2.5) + 0.2;
+}
+function gradient(x) {
+  const eps = 0.001;
+  return (lossFunc(x + eps) - lossFunc(x - eps)) / (2 * eps);
+}
+
+const xMin = -1.5, xMax = 10;
+const lossMin = -0.2, lossMax = 5;
+
+function toCanvas(x, y) {
+  const cx = ((x - xMin) / (xMax - xMin)) * (W - 80) + 40;
+  const cy = H - 30 - ((y - lossMin) / (lossMax - lossMin)) * (H - 60);
+  return [cx, cy];
+}
+
+let marbleX = 8.5;
+let lr = 0.04;
+let animId = null;
+let step = 0;
+
+const lrSlider = document.getElementById('lrSlider');
+const lrVal = document.getElementById('lrVal');
+const statPos = document.getElementById('statPos');
+const statLoss = document.getElementById('statLoss');
+const statGrad = document.getElementById('statGrad');
+const narrative = document.getElementById('mvNarrative');
+
+const narratives = [
+  n => `The marble wakes on a steep hill. Loss: ${n.loss}. Gradient shouts downhill.`,
+  n => `Rolling… step ${n.step}. Loss drops to ${n.loss}. The slope eases slightly.`,
+  n => `Midway through the valley. Gradient is gentler now — loss ${n.loss}.`,
+  n => `Almost there. Small steps, smaller gradient. Loss: ${n.loss}.`,
+  n => `The marble finds a valley floor. Loss ${n.loss}. Gradient whispers: "tiny adjustment."`,
+  n => `Settled. Loss: ${n.loss}. The marble has learned what downhill feels like.`,
+];
+
+function getNarrative(s, loss, grad) {
+  const idx = Math.min(Math.floor(s / 4), narratives.length - 1);
+  return narratives[idx]({ step: s, loss, grad });
+}
+
+lrSlider.addEventListener('input', () => {
+  lr = parseFloat(lrSlider.value) / 100;
+  lrVal.textContent = lr.toFixed(2);
+});
+
+function drawLandscape() {
+  ctx.clearRect(0, 0, W, H);
+
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const surfaceColor = isDark ? '#2a2a2a' : '#f7f5f0';
+  const lineColor = isDark ? '#555' : '#ccc';
+  const curveColor = isDark ? '#8899bb' : '#185FA5';
+  const fillTop = isDark ? 'rgba(24,95,165,0.18)' : 'rgba(24,95,165,0.07)';
+  const fillBot = isDark ? 'rgba(24,95,165,0.02)' : 'rgba(24,95,165,0.01)';
+  const textColor = isDark ? '#999' : '#888';
+  const axisColor = isDark ? '#444' : '#ddd';
+
+  ctx.fillStyle = surfaceColor;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, W, H, 12);
+  ctx.fill();
+
+  for (let yi = 0; yi <= 4; yi++) {
+    const y = lossMin + (yi / 4) * (lossMax - lossMin);
+    const [, cy] = toCanvas(0, y);
+    ctx.strokeStyle = axisColor;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(40, cy);
+    ctx.lineTo(W - 40, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = textColor;
+    ctx.font = '11px var(--font-sans, sans-serif)';
+    ctx.textAlign = 'right';
+    ctx.fillText(y.toFixed(1), 36, cy + 4);
+  }
+
+  ctx.beginPath();
+  let first = true;
+  for (let px = 40; px <= W - 40; px++) {
+    const x = xMin + ((px - 40) / (W - 80)) * (xMax - xMin);
+    const y = lossFunc(x);
+    const [, cy] = toCanvas(x, y);
+    if (first) { ctx.moveTo(px, cy); first = false; }
+    else ctx.lineTo(px, cy);
+  }
+  const grad2 = ctx.createLinearGradient(0, 0, 0, H);
+  grad2.addColorStop(0, fillTop);
+  grad2.addColorStop(1, fillBot);
+  ctx.lineTo(W - 40, H - 30);
+  ctx.lineTo(40, H - 30);
+  ctx.closePath();
+  ctx.fillStyle = grad2;
+  ctx.fill();
+
+  ctx.beginPath();
+  first = true;
+  for (let px = 40; px <= W - 40; px++) {
+    const x = xMin + ((px - 40) / (W - 80)) * (xMax - xMin);
+    const y = lossFunc(x);
+    const [, cy] = toCanvas(x, y);
+    if (first) { ctx.moveTo(px, cy); first = false; }
+    else ctx.lineTo(px, cy);
+  }
+  ctx.strokeStyle = curveColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const optX = 2.35;
+  const [ocx, ocy] = toCanvas(optX, lossFunc(optX));
+  ctx.beginPath();
+  ctx.arc(ocx, ocy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? '#5DCAA5' : '#0F6E56';
+  ctx.fill();
+  ctx.fillStyle = textColor;
+  ctx.font = '11px var(--font-sans, sans-serif)';
+  ctx.textAlign = 'center';
+  ctx.fillText('lowest point', ocx, ocy - 10);
+}
+
+function drawMarble() {
+  const y = lossFunc(marbleX);
+  const g = gradient(marbleX);
+  const [cx, cy] = toCanvas(marbleX, y);
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  const arrowLen = Math.max(20, Math.min(60, Math.abs(g) * 12));
+  const dir = g > 0 ? -1 : 1;
+  const ax = cx + dir * arrowLen;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 14);
+  ctx.lineTo(ax, cy - 14);
+  ctx.strokeStyle = isDark ? '#5DCAA5' : '#1D9E75';
+  ctx.lineWidth = 2;
+  const headDir = dir;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(ax, cy - 14);
+  ctx.lineTo(ax - headDir * 7, cy - 19);
+  ctx.moveTo(ax, cy - 14);
+  ctx.lineTo(ax - headDir * 7, cy - 9);
+  ctx.strokeStyle = isDark ? '#5DCAA5' : '#1D9E75';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? '#85B7EB' : '#378ADD';
+  ctx.fill();
+  ctx.strokeStyle = isDark ? '#B5D4F4' : '#185FA5';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx - 3, cy - 3, 3, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? 'rgba(200,220,255,0.5)' : 'rgba(255,255,255,0.6)';
+  ctx.fill();
+}
+
+function updateStats() {
+  const y = lossFunc(marbleX);
+  const g = gradient(marbleX);
+  statPos.textContent = marbleX.toFixed(2);
+  statLoss.textContent = y.toFixed(3);
+  statGrad.textContent = g.toFixed(3);
+  narrative.innerHTML = getNarrative(step, y.toFixed(3), g.toFixed(3));
+}
+
+function render() {
+  drawLandscape();
+  drawMarble();
+  updateStats();
+}
+
+function doStep() {
+  const g = gradient(marbleX);
+  marbleX = marbleX - lr * g;
+  marbleX = Math.max(xMin + 0.1, Math.min(xMax - 0.1, marbleX));
+  step++;
+  render();
+}
+
+document.getElementById('stepBtn').addEventListener('click', () => {
+  stopAnim();
+  doStep();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  stopAnim();
+  marbleX = 8.5;
+  step = 0;
+  render();
+  narrative.innerHTML = 'Press <em>Step once</em> or <em>Roll</em> to start the marble\'s journey.';
+});
+
+const runBtn = document.getElementById('runBtn');
+let running = false;
+
+function stopAnim() {
+  if (animId) { clearInterval(animId); animId = null; }
+  running = false;
+  runBtn.textContent = 'Roll ▶';
+}
+
+runBtn.addEventListener('click', () => {
+  if (running) { stopAnim(); return; }
+  running = true;
+  runBtn.textContent = 'Pause ⏸';
+  animId = setInterval(() => {
+    const g = gradient(marbleX);
+    if (Math.abs(g) < 0.005 || step > 200) { stopAnim(); return; }
+    doStep();
+  }, 80);
+});
+
+render();
+</script>

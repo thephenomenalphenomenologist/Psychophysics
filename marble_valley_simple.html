@@ -1,0 +1,205 @@
+
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  #mv { padding: 1.5rem 0 1rem; font-family: var(--font-sans); }
+  #mv canvas { display: block; width: 100%; border-radius: var(--border-radius-lg); cursor: pointer; }
+  #mv-controls { display: flex; align-items: center; gap: 12px; margin: 1rem 0 0.5rem; }
+  #mv-controls label { font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; }
+  #mv-controls input { flex: 1; }
+  #mv-controls span { font-size: 13px; font-weight: 500; min-width: 28px; color: var(--color-text-primary); }
+  #mv-btns { display: flex; gap: 8px; margin: 0.75rem 0; }
+  #mv-caption { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; min-height: 1.8em; margin-top: 0.5rem; font-style: italic; }
+</style>
+
+<div id="mv">
+  <h2 class="sr-only">A marble rolling downhill on a landscape — interactive gradient descent</h2>
+  <canvas id="c" width="640" height="260"></canvas>
+
+  <div id="mv-controls">
+    <label>Step size</label>
+    <input type="range" id="lr" min="1" max="9" value="4" step="1">
+    <span id="lrv">medium</span>
+  </div>
+
+  <div id="mv-btns">
+    <button id="stepBtn">Take one step</button>
+    <button id="runBtn">Roll</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+
+  <p id="mv-caption">The marble rests on the hill. Press <em>Take one step</em> to begin.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 260;
+
+const lrLabels = ['', 'tiny', 'small', 'careful', 'medium', 'brisk', 'bold', 'large', 'daring', 'wild'];
+
+function loss(x) {
+  return 0.0014*(x-3)**4 - 0.045*(x-3)**3 + 0.48*(x-2.4)**2 + 0.18*Math.sin(x*2.4) + 0.15;
+}
+function grad(x) {
+  return (loss(x+0.001)-loss(x-0.001))/0.002;
+}
+
+const X0 = -1.2, X1 = 10.2;
+const Y0 = -0.3, Y1 = 5.2;
+
+function tx(x) { return ((x-X0)/(X1-X0))*(W-72)+40; }
+function ty(y) { return H-28 - ((y-Y0)/(Y1-Y0))*(H-56); }
+
+let mx = 8.6, steps = 0, running = false, animId = null;
+let settled = false;
+
+function lrVal() { return parseFloat(document.getElementById('lr').value)/100; }
+
+const captions = [
+  () => `High on the hill. The slope is steep — the marble feels it.`,
+  () => `Rolling. Each step follows the slope, not a map.`,
+  () => `The terrain flattens. Smaller nudges now.`,
+  () => `Approaching calmer ground. The slope barely whispers.`,
+  () => `The marble finds a quiet valley. It has learned what downhill feels like.`,
+];
+
+function getCaption() {
+  if (settled) return captions[4]();
+  const g = Math.abs(grad(mx));
+  if (g > 1.8) return captions[0]();
+  if (g > 0.8) return captions[1]();
+  if (g > 0.3) return captions[2]();
+  return captions[3]();
+}
+
+function isDark() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function draw() {
+  const dark = isDark();
+  ctx.clearRect(0,0,W,H);
+
+  const bg = dark ? '#1e1e1e' : '#f9f8f5';
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.roundRect(0,0,W,H,10); ctx.fill();
+
+  ctx.beginPath();
+  let first = true;
+  for (let px = 40; px <= W-32; px++) {
+    const x = X0 + ((px-40)/(W-72))*(X1-X0);
+    const y = loss(x);
+    const [cx, cy] = [px, ty(y)];
+    if (cy < 8 || cy > H-8) { first = true; continue; }
+    if (first) { ctx.moveTo(cx, cy); first = false; } else ctx.lineTo(cx, cy);
+  }
+  ctx.lineTo(W-32, H-28);
+  ctx.lineTo(40, H-28);
+  ctx.closePath();
+  ctx.fillStyle = dark ? 'rgba(100,130,180,0.13)' : 'rgba(55,138,221,0.07)';
+  ctx.fill();
+
+  ctx.beginPath();
+  first = true;
+  for (let px = 40; px <= W-32; px++) {
+    const x = X0 + ((px-40)/(W-72))*(X1-X0);
+    const y = loss(x);
+    const [cx, cy] = [px, ty(y)];
+    if (cy < 8 || cy > H-8) { first = true; continue; }
+    if (first) { ctx.moveTo(cx, cy); first = false; } else ctx.lineTo(cx, cy);
+  }
+  ctx.strokeStyle = dark ? '#6688bb' : '#378ADD';
+  ctx.lineWidth = 2; ctx.stroke();
+
+  const my = loss(mx);
+  const g = grad(mx);
+  const [mcx, mcy] = [tx(mx), ty(my)];
+
+  if (!settled) {
+    const dir = g > 0 ? -1 : 1;
+    const mag = Math.min(52, Math.max(16, Math.abs(g) * 14));
+    const ax = mcx + dir * mag;
+    const ay = mcy - 18;
+    ctx.beginPath();
+    ctx.moveTo(mcx, ay);
+    ctx.lineTo(ax, ay);
+    ctx.strokeStyle = dark ? '#5DCAA5' : '#1D9E75';
+    ctx.lineWidth = 1.5; ctx.stroke();
+    const hd = dir;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax - hd*7, ay-5);
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax - hd*7, ay+5);
+    ctx.strokeStyle = dark ? '#5DCAA5' : '#1D9E75';
+    ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
+  if (settled) {
+    ctx.beginPath();
+    ctx.arc(mcx, mcy, 12, 0, Math.PI*2);
+    ctx.fillStyle = dark ? '#5DCAA5' : '#1D9E75';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(mcx-3, mcy-3, 4, 0, Math.PI*2);
+    ctx.fillStyle = dark ? 'rgba(200,255,230,0.5)' : 'rgba(255,255,255,0.55)';
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(mcx, mcy, 11, 0, Math.PI*2);
+    ctx.fillStyle = dark ? '#85B7EB' : '#378ADD';
+    ctx.fill();
+    ctx.strokeStyle = dark ? '#B5D4F4' : '#185FA5';
+    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mcx-3, mcy-3, 3.5, 0, Math.PI*2);
+    ctx.fillStyle = dark ? 'rgba(200,220,255,0.45)' : 'rgba(255,255,255,0.55)';
+    ctx.fill();
+  }
+
+  document.getElementById('mv-caption').innerHTML = getCaption();
+}
+
+function doStep() {
+  const g = grad(mx);
+  if (Math.abs(g) < 0.006 || steps > 180) { settled = true; stopRun(); draw(); return; }
+  mx = mx - lrVal() * g;
+  mx = Math.max(X0+0.1, Math.min(X1-0.1, mx));
+  steps++;
+  draw();
+}
+
+function stopRun() {
+  if (animId) { clearInterval(animId); animId = null; }
+  running = false;
+  document.getElementById('runBtn').textContent = 'Roll';
+}
+
+document.getElementById('stepBtn').addEventListener('click', () => {
+  stopRun(); settled = false; doStep();
+});
+
+document.getElementById('runBtn').addEventListener('click', () => {
+  if (running) { stopRun(); return; }
+  settled = false;
+  running = true;
+  document.getElementById('runBtn').textContent = 'Pause';
+  animId = setInterval(() => {
+    const g = grad(mx);
+    if (Math.abs(g) < 0.006 || steps > 180) { settled = true; stopRun(); draw(); return; }
+    doStep();
+  }, 75);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  stopRun(); mx = 8.6; steps = 0; settled = false; draw();
+  document.getElementById('mv-caption').innerHTML = 'The marble rests on the hill. Press <em>Take one step</em> to begin.';
+});
+
+document.getElementById('lr').addEventListener('input', function() {
+  document.getElementById('lrv').textContent = lrLabels[parseInt(this.value)];
+});
+
+draw();
+</script>
