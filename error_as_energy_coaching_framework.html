@@ -1,0 +1,429 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .page {
+    font-family: 'DM Sans', sans-serif;
+    color: var(--color-text-primary);
+    padding: 2rem 1.5rem;
+    max-width: 680px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin-bottom: 6px;
+  }
+
+  .title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+  }
+
+  .divider {
+    border: none;
+    border-top: 0.5px solid var(--color-border-tertiary);
+    margin-bottom: 1.5rem;
+  }
+
+  .core-truth {
+    background: var(--color-background-secondary);
+    border-left: 3px solid #3C3489;
+    border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .core-truth p {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+  }
+
+  .core-truth .author {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin-top: 8px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    border-top: 0.5px solid var(--color-border-tertiary);
+  }
+
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .pillar {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
+  }
+
+  .pillar-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+
+  .pillar-icon.purple { background: #EEEDFE; color: #3C3489; }
+  .pillar-icon.teal   { background: #E1F5EE; color: #0F6E56; }
+  .pillar-icon.amber  { background: #FAEEDA; color: #854F0B; }
+
+  .pillar h3 {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--color-text-primary);
+  }
+
+  .pillar p {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--color-text-secondary);
+  }
+
+  .reframes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .reframe-card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem;
+  }
+
+  .from-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #E24B4A;
+    margin-bottom: 4px;
+  }
+
+  .to-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #0F6E56;
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+
+  .from-text {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    text-decoration: line-through;
+    text-decoration-color: #F09595;
+  }
+
+  .to-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+  }
+
+  .arrow-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-tertiary);
+    font-size: 14px;
+    margin: 6px 0;
+  }
+
+  .questions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .q-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .q-item:hover {
+    border-color: var(--color-border-secondary);
+  }
+
+  .q-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #EEEDFE;
+    color: #3C3489;
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .q-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
+  .analogy-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    font-size: 13px;
+  }
+
+  .analogy-table th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    padding: 0 10px 8px 10px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    font-weight: 400;
+  }
+
+  .analogy-table td {
+    padding: 7px 10px;
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+  }
+
+  .analogy-table td:first-child {
+    color: var(--color-text-primary);
+    font-weight: 500;
+  }
+
+  .analogy-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .affirmations {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .aff {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .footer {
+    border-top: 0.5px solid var(--color-border-tertiary);
+    padding-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-tagline {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+  }
+
+  .footer-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 480px) {
+    .pillars { grid-template-columns: 1fr; }
+    .reframes { grid-template-columns: 1fr; }
+    .affirmations { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page">
+  <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Error as Energy: A personal growth coaching framework based on the science of learning through mistakes</h2>
+
+  <p class="eyebrow">Personal growth framework</p>
+  <h1 class="title">Error as Energy</h1>
+  <p class="subtitle">What neural networks teach us about becoming</p>
+
+  <hr class="divider">
+
+  <div class="core-truth">
+    <p>"Learning is not insight. It is motion guided by error. The model learns because it can feel the incline."</p>
+    <p class="author">adapted from machine learning science</p>
+  </div>
+
+  <p class="section-label">The three laws of growth</p>
+
+  <div class="pillars">
+    <div class="pillar">
+      <div class="pillar-icon purple"><i class="ti ti-bolt" aria-hidden="true"></i></div>
+      <h3>Error is signal</h3>
+      <p>Mistakes don't mean you're broken. They reveal the slope — the exact direction your next step should go.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon teal"><i class="ti ti-route" aria-hidden="true"></i></div>
+      <h3>Motion is the goal</h3>
+      <p>Growth isn't a destination. Each small correction accumulates into who you become. You are always mid-journey.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon amber"><i class="ti ti-topology-star" aria-hidden="true"></i></div>
+      <h3>Terrain shapes you</h3>
+      <p>Your environment, habits, and relationships are the landscape. Choose them — they determine where you can go.</p>
+    </div>
+  </div>
+
+  <p class="section-label">Reframes that change everything</p>
+
+  <div class="reframes">
+    <div class="reframe-card">
+      <p class="from-label">Old story</p>
+      <p class="from-text">I failed, so I'm not good enough</p>
+      <div class="arrow-row"><i class="ti ti-arrow-down" aria-hidden="true"></i></div>
+      <p class="to-label">New truth</p>
+      <p class="to-text">I got data about my slope — now I know which direction to move</p>
+    </div>
+    <div class="reframe-card">
+      <p class="from-label">Old story</p>
+      <p class="from-text">I'm stuck and nothing is changing</p>
+      <div class="arrow-row"><i class="ti ti-arrow-down" aria-hidden="true"></i></div>
+      <p class="to-label">New truth</p>
+      <p class="to-text">I'm on a plateau — this is a structural phase, not a personal flaw</p>
+    </div>
+    <div class="reframe-card">
+      <p class="from-label">Old story</p>
+      <p class="from-text">I should already be perfect at this</p>
+      <div class="arrow-row"><i class="ti ti-arrow-down" aria-hidden="true"></i></div>
+      <p class="to-label">New truth</p>
+      <p class="to-text">Every expert began as random noise. Skill is accumulated correction over time</p>
+    </div>
+    <div class="reframe-card">
+      <p class="from-label">Old story</p>
+      <p class="from-text">My flaws make me less than others</p>
+      <div class="arrow-row"><i class="ti ti-arrow-down" aria-hidden="true"></i></div>
+      <p class="to-label">New truth</p>
+      <p class="to-text">No one finds the minimum in one step. We all navigate saddles and uncertainty</p>
+    </div>
+  </div>
+
+  <p class="section-label">Coaching reflection questions</p>
+
+  <div class="questions">
+    <div class="q-item">
+      <span class="q-num">1</span>
+      <p class="q-text">Where in your life does a mistake feel like evidence of who you are, rather than information about what to adjust?</p>
+    </div>
+    <div class="q-item">
+      <span class="q-num">2</span>
+      <p class="q-text">Think of a time you were "stuck." Looking back, were you actually on a plateau — slowly gathering energy to move?</p>
+    </div>
+    <div class="q-item">
+      <span class="q-num">3</span>
+      <p class="q-text">What would you attempt if you truly believed your mistakes were guiding you rather than defining you?</p>
+    </div>
+    <div class="q-item">
+      <span class="q-num">4</span>
+      <p class="q-text">Which "landscape" in your life — relationships, work, habits — is shaping your movement in ways you haven't examined?</p>
+    </div>
+    <div class="q-item">
+      <span class="q-num">5</span>
+      <p class="q-text">Where are you taking steps that are too large (overwhelm) or too small (no progress)? What's the right step size right now?</p>
+    </div>
+  </div>
+
+  <p class="section-label">The growth map — science translated to life</p>
+
+  <table class="analogy-table">
+    <thead>
+      <tr>
+        <th>In learning science</th>
+        <th>In your life this means</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Gradient (direction of error)</td><td>Honest feedback showing you where to grow next</td></tr>
+      <tr><td>Learning rate (step size)</td><td>How much change you take on at once — too much overwhelms, too little stagnates</td></tr>
+      <tr><td>Plateau (flat terrain)</td><td>A phase of slow, invisible growth — real progress happening beneath the surface</td></tr>
+      <tr><td>Wide basin (stable minimum)</td><td>A grounded identity that holds under pressure and change</td></tr>
+      <tr><td>Noise (random variation)</td><td>Unexpected disruptions that break old patterns and open new paths</td></tr>
+      <tr><td>Overparameterization</td><td>Having more capacity than the problem requires — room to breathe, experiment, and recover</td></tr>
+    </tbody>
+  </table>
+
+  <p class="section-label">Truths to carry</p>
+
+  <div class="affirmations">
+    <p class="aff">"Without slope, there is no direction. Without direction, there is no movement."</p>
+    <p class="aff">"I do not need to find the perfect answer. I need to find a stable, generous place to stand."</p>
+    <p class="aff">"Noise is not just disruption. It is an escape mechanism from patterns that no longer serve me."</p>
+    <p class="aff">"Growth is not one dramatic insight. It is a million microscopic corrections accumulating."</p>
+  </div>
+
+  <div class="footer">
+    <p class="footer-tagline">Based on the science of optimization and learning dynamics</p>
+    <p class="footer-logo">Error as Energy · Part I</p>
+  </div>
+</div>
